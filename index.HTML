@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PBB 2.0 - ADMIN OFFLINE AUCTION (SECURITY PIN)</title>
+    <!-- Firebase Modular SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, getDocs, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBOrWErmXEnAyvxKQqCf4nZvnBcl0nRwas",
+            authDomain: "purulia-big-bash-auction.firebaseapp.com",
+            projectId: "purulia-big-bash-auction",
+            storageBucket: "purulia-big-bash-auction.firebasestorage.app",
+            messagingSenderId: "593663651549",
+            appId: "1:593663651549:web:2422be62f0d83d56613534"
+        };
+
+        const INITIAL_PURSE = 35000;
+        const MAX_PLAYERS = 15;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'pbb-offline-admin-final';
+
+        const players = [
+            /* ICON PLAYERS */
+            {sr:1,name:"ARJUN GORAIN",cat:"ICON"},{sr:4,name:"TRIDIP KARMAKAR",cat:"ICON"},{sr:7,name:"AFJAL ANSARY",cat:"ICON"},{sr:10,name:"NIMAI MAHATHA",cat:"ICON"},{sr:48,name:"RAJESH CHATTERJEE (RAJU)",cat:"ICON"},{sr:51,name:"SUBHADIP CHATTERJEE",cat:"ICON"},{sr:65,name:"MOHIT MOHTA",cat:"ICON"},{sr:91,name:"PORAN BAURI",cat:"ICON"},{sr:139,name:"SATYASADHAN RAJAK (INDRA)",cat:"ICON"},{sr:151,name:"PRAKASH PRASAD",cat:"ICON"},{sr:162,name:"MD IRFAN",cat:"ICON"},{sr:163,name:"SUMIT KARMAKAR",cat:"ICON"},{sr:189,name:"SANTOSH RAM",cat:"ICON"},{sr:205,name:"BIJOY SAHANI",cat:"ICON"},{sr:233,name:"BIKASH SHARMA (CHOTIYA)",cat:"ICON"},{sr:259,name:"INDRANIL SINGHA DEO (MANA)",cat:"ICON"},{sr:261,name:"PRAVIN SINGH",cat:"ICON"},{sr:290,name:"ASHRAFUL ANSARY",cat:"ICON"},
+            /* U23 PLAYERS */
+            {sr:15,name:"MD AJAZ",cat:"U23"},{sr:18,name:"SOURAV (SANTY)",cat:"U23"},{sr:21,name:"BITTU PANDEY",cat:"U23"},{sr:27,name:"SEKH ABU SUFYAN",cat:"U23"},{sr:32,name:"ANURAG TRIPATHY (BHATI)",cat:"U23"},{sr:34,name:"MD TOUHID ALAM",cat:"U23"},{sr:37,name:"DHIREN CHATTERJEE (DHIRU)",cat:"U23"},{sr:38,name:"SUSANTA KUMBHAKAR",cat:"U23"},{sr:41,name:"ABHIJIT MAITY",cat:"U23"},{sr:42,name:"AYAN GHOSH",cat:"U23"},{sr:43,name:"VISHAL RAj",cat:"U23"},{sr:46,name:"TAPAJOTI BAURI (TUFAN)",cat:"U23"},{sr:49,name:"DEEP GOSWAMI (DEB)",cat:"U23"},{sr:53,name:"ADARSHA GANGULI",cat:"U23"},{sr:62,name:"HARADHAN BAURI",cat:"U23"},{sr:63,name:"MD ARBAZ (BABA)",cat:"U23"},{sr:74,name:"PRALAY SINGHA DEO (DHONA)",cat:"U23"},{sr:79,name:"KRISH RAY",cat:"U23"},{sr:81,name:"PARTHA MAHATO",cat:"U23"},{sr:83,name:"RONIK CHATTERJEE",cat:"U23"},{sr:84,name:"AKASH KUIRI",cat:"U23"},{sr:92,name:"SUVADIP MAJEE (SUBHA)",cat:"U23"},{sr:93,name:"RAJA BHUINA",cat:"U23"},{sr:101,name:"AMRIT CHATTERJEE",cat:"U23"},{sr:103,name:"RATAN BAURI",cat:"U23"},{sr:108,name:"SIBAM SANTIKARY",cat:"U23"},{sr:115,name:"WARISH AHMED",cat:"U23"},{sr:123,name:"SUDIP MAJEE",cat:"U23"},{sr:125,name:"DILKHUS ANSARI",cat:"U23"},{sr:127,name:"ARKA MUKHERJEE",cat:"U23"},{sr:128,name:"DILKHUSH RAJAK",cat:"U23"},{sr:130,name:"CHANDRANSHU MAHATO",cat:"U23"},{sr:132,name:"INDRAJIT MAHATO (PAPAI)",cat:"U23"},{sr:133,name:"DWIPAN BANERJEE",cat:"U23"},{sr:134,name:"BHAGBAT PAUL",cat:"U23"},{sr:135,name:"ROHAN RAO",cat:"U23"},{sr:137,name:"ROKI RAJAK",cat:"U23"},{sr:138,name:"RUDRA MUKHERJEE (LABUSEN)",cat:"U23"},{sr:141,name:"PINTU RAJAK",cat:"U23"},{sr:147,name:"SUJAY KARMAKAR",cat:"U23"},{sr:149,name:"RAHUL GOSWAMI",cat:"U23"},{sr:150,name:"SERAFAT ANSARY",cat:"U23"},{sr:153,name:"PRASHANT KUMAR (ANUPAM)",cat:"U23"},{sr:156,name:"MAHABIR SHUKLA (HARDIK)",cat:"U23"},{sr:160,name:"MOHAMMED THOHEED (MUNNA)",cat:"U23"},{sr:168,name:"PANKAJ MAHATO",cat:"U23"},{sr:169,name:"SWAPAN MAHATO (SAYAN)",cat:"U23"},{sr:175,name:"SHUBHAM PODDAR",cat:"U23"},{sr:177,name:"DINESH KARMAKAR",cat:"U23"},{sr:178,name:"SABBIR ALAM",cat:"U23"},{sr:183,name:"BABU SWARNKAR (KHEDU)",cat:"U23"},{sr:194,name:"AKASH KUMAR DAS",cat:"U23"},{sr:195,name:"BISHAL DUBEY",cat:"U23"},{sr:197,name:"DEBASHIS MAjHI",cat:"U23"},{sr:198,name:"SHUBHAJIT SEN",cat:"U23"},{sr:207,name:"SOURAV GORAIN",cat:"U23"},{sr:209,name:"MUKESH MAJEE",cat:"U23"},{sr:210,name:"SUMIT KUMAR",cat:"U23"},{sr:214,name:"ASHUTOSH KUMAR SINGH",cat:"U23"},{sr:222,name:"GOURAB KAR",cat:"U23"},{sr:224,name:"BISWAJIT ORANG",cat:"U23"},{sr:236,name:"SOUMIK GHOSH",cat:"U23"},{sr:238,name:"GOURAV PANDEY",cat:"U23"},{sr:241,name:"SK RIYAZ",cat:"U23"},{sr:242,name:"DEEP MUKHERJEE",cat:"U23"},{sr:244,name:"ROUNAK PANDEY",cat:"U23"},{sr:251,name:"RAHUL GANGULI",cat:"U23"},{sr:253,name:"FARHAN ANSARY",cat:"U23"},{sr:264,name:"KUNDAN DUBEY",cat:"U23"},{sr:269,name:"TAPASH PAUL",cat:"U23"},{sr:272,name:"SANDIPAN BANERJEE",cat:"U23"},{sr:274,name:"SANJOY SEN",cat:"U23"},{sr:280,name:"AVIJIT ROY",cat:"U23"},{sr:284,name:"KOUSHIK MAHATO",cat:"U23"},{sr:288,name:"ANIRBAN KUNDU",cat:"U23"},{sr:294,name:"PREM BARAL",cat:"U23"},{sr:300,name:"TAMAL CHAKRABORTY",cat:"U23"},{sr:309,name:"SAYAN SENAPATI",cat:"U23"},{sr:313,name:"SUBHA SHILL",cat:"U23"},{sr:314,name:"BIKRAM MAHATO",cat:"U23"},{sr:315,name:"AYUSH AGARWAL",cat:"U23"},{sr:320,name:"GOPAL DEY",cat:"U23"},
+            /* ABOVE 40 PLAYERS (INCLUDING MILAN MONDAL SR 318) */
+            {sr:12,name:"PRASANTA KARMAKAR",cat:"ABOVE 40"},{sr:20,name:"AJITESH GANGOPADHYAY",cat:"ABOVE 40"},{sr:31,name:"MANAS CHAKRABORTY",cat:"ABOVE 40"},{sr:36,name:"GOBINDA BAURI",cat:"ABOVE 40"},{sr:39,name:"MD ANIS",cat:"ABOVE 40"},{sr:47,name:"CHAITANYA DEV BOURI",cat:"ABOVE 40"},{sr:57,name:"TARUN KUMAR CHOUDHURY",cat:"ABOVE 40"},{sr:69,name:"SOURAV DEY",cat:"ABOVE 40"},{sr:78,name:"SANJU DHABALBABU",cat:"ABOVE 40"},{sr:90,name:"PRESENJIT GOSWAMI",cat:"ABOVE 40"},{sr:100,name:"DEBDAT GANGULY (PAPPU)",cat:"ABOVE 40"},{sr:124,name:"KAJAL MAHATO",cat:"ABOVE 40"},{sr:145,name:"SRIKANTA MAHATO",cat:"ABOVE 40"},{sr:148,name:"AMAR JAISWAL (LALLA)",cat:"ABOVE 40"},{sr:155,name:"SANTANU BANERJEE",cat:"ABOVE 40"},{sr:172,name:"AMZAD KHAN",cat:"ABOVE 40"},{sr:181,name:"BISWAJIT DEY",cat:"ABOVE 40"},{sr:187,name:"MUKENDAR SINGH",cat:"ABOVE 40"},{sr:270,name:"SK AMANUL",cat:"ABOVE 40"},{sr:271,name:"SAJID SAHA",cat:"ABOVE 40"},{sr:296,name:"BAPI RAJAK",cat:"ABOVE 40"},{sr:318,name:"MILAN MANDAL",cat:"ABOVE 40"},{sr:322,name:"BIKASH KARMAKAR",cat:"ABOVE 40"},
+            /* NORMAL CATEGORY */
+            {sr:2,name:"KAMAL SHAW",cat:"NORMAL"},{sr:3,name:"SOURAV MAHATO",cat:"NORMAL"},{sr:5,name:"BIPUL SINGH SARDAR",cat:"NORMAL"},{sr:6,name:"SARFARAJ SEIKH",cat:"NORMAL"},{sr:8,name:"RAHUL CHANDRA MAHATO",cat:"NORMAL"},{sr:9,name:"SANJOY MAHATO",cat:"NORMAL"},{sr:11,name:"PRASENJIT BANERJEE",cat:"NORMAL"},{sr:13,name:"SAMBHU BAURI",cat:"NORMAL"},{sr:14,name:"TAPAS DEB (MITHUN)",cat:"NORMAL"},{sr:16,name:"ARUP KUMAR SENAPATI",cat:"NORMAL"},{sr:17,name:"MASUM ANSARI",cat:"NORMAL"},{sr:19,name:"GANESH SUKLA",cat:"NORMAL"},{sr:22,name:"BIKASH MAHATO",cat:"NORMAL"},{sr:23,name:"SOURAB KARMAKAR (BALI)",cat:"NORMAL"},{sr:24,name:"BISHNUPADA DUTTA",cat:"NORMAL"},{sr:25,name:"SANU PARAMANIK",cat:"NORMAL"},{sr:26,name:"DEBASIS BANERJEE",cat:"NORMAL"},{sr:28,name:"NAYAN SARAK",cat:"NORMAL"},{sr:29,name:"UTTAM TUDU",cat:"NORMAL"},{sr:30,name:"SUBHAM RAY",cat:"NORMAL"},{sr:33,name:"KOUSHIK MANDAL",cat:"NORMAL"},{sr:35,name:"RANJIT GOPE (JHALI)",cat:"NORMAL"},{sr:40,name:"RAJIB RAKSHIT (RAJA)",cat:"NORMAL"},{sr:44,name:"SWARUP GOSWAMI",cat:"NORMAL"},{sr:45,name:"PALLAB MAHATO",cat:"NORMAL"},{sr:50,name:"RAHUL ROY (HITMAN)",cat:"NORMAL"},{sr:52,name:"RON CHAKRABORTY",cat:"NORMAL"},{sr:54,name:"MAHARAM ANSARI",cat:"NORMAL"},{sr:55,name:"SOMNATH MUKHERJEE",cat:"NORMAL"},{sr:56,name:"JHULAN ROY",cat:"NORMAL"},{sr:58,name:"PINTU KAIBARTA",cat:"NORMAL"},{sr:59,name:"SACHIN BAURI",cat:"NORMAL"},{sr:60,name:"SATYAJIT MAHATO",cat:"NORMAL"},{sr:61,name:"SURAJ BANERJEE (MONAI)",cat:"NORMAL"},{sr:64,name:"SOUMYADIPTA CHATTERJEE",cat:"NORMAL"},{sr:66,name:"SAIKAT ROY",cat:"NORMAL"},{sr:67,name:"GOURAV MUKHERJEE",cat:"NORMAL"},{sr:68,name:"SARNENDU MAHATO",cat:"NORMAL"},{sr:70,name:"BISWANATH SEN (SONU)",cat:"NORMAL"},{sr:71,name:"AVIJIT KARMAKAR",cat:"NORMAL"},{sr:72,name:"NIZAMUDDIN ANSARI (GAJU)",cat:"NORMAL"},{sr:73,name:"AMIYA MAHATO",cat:"NORMAL"},{sr:75,name:"SOMNATH GORAI",cat:"NORMAL"},{sr:76,name:"BISWAJIT ROY",cat:"NORMAL"},{sr:77,name:"PROBIR CHAND",cat:"NORMAL"},{sr:80,name:"UJJWAL MUKHERJEE",cat:"NORMAL"},{sr:82,name:"AMRIT DHIBAR",cat:"NORMAL"},{sr:85,name:"RUPESH SINGH (RUPA)",cat:"NORMAL"},{sr:86,name:"SURAJ RAJAK",cat:"NORMAL"},{sr:87,name:"NITAI MAHATO",cat:"NORMAL"},{sr:88,name:"PARTHA SARATHI MAHATO",cat:"NORMAL"},{sr:89,name:"BALARAM BAURI",cat:"NORMAL"},{sr:94,name:"AMIT KHEDIA (MICKEY)",cat:"NORMAL"},{sr:95,name:"BHASKAR BAURI",cat:"NORMAL"},{sr:96,name:"BIMAL MAHATO",cat:"NORMAL"},{sr:97,name:"SOURAV LOHAR",cat:"NORMAL"},{sr:98,name:"SUBHAJIT CHATTERJEE",cat:"NORMAL"},{sr:99,name:"TAPAS MAHATO",cat:"NORMAL"},{sr:102,name:"ASWINI BOURI",cat:"NORMAL"},{sr:104,name:"AJAY MONDAL",cat:"NORMAL"},{sr:105,name:"ACHINTA BAURI (ABD)",cat:"NORMAL"},{sr:106,name:"RANA ADHIKARY",cat:"NORMAL"},{sr:107,name:"BIPLOB ROY (AKASH)",cat:"NORMAL"},{sr:109,name:"PRADEEP MAHATO",cat:"NORMAL"},{sr:110,name:"RATIKANTA BANERJEE",cat:"NORMAL"},{sr:111,name:"SOUMYADEEP PAUL (TATAI)",cat:"NORMAL"},{sr:112,name:"RATAN KUMAR MAHATO",cat:"NORMAL"},{sr:113,name:"DHANANJAY BAURI (JAGAT)",cat:"NORMAL"},{sr:114,name:"PRATIK KARMAKAR (DABLA)",cat:"NORMAL"},{sr:116,name:"RAJU MANDAL",cat:"NORMAL"},{sr:117,name:"DEBASIS DAN",cat:"NORMAL"},{sr:118,name:"SUBIR CHOWDHURY",cat:"NORMAL"},{sr:119,name:"BIKASH BAURI",cat:"NORMAL"},{sr:120,name:"SARBOJIT HAZRA (BUNTY)",cat:"NORMAL"},{sr:121,name:"BISWAJIT DUTTA",cat:"NORMAL"},{sr:122,name:"BIJAY GORAIN",cat:"NORMAL"},{sr:126,name:"MUBARAK ANSARY",cat:"NORMAL"},{sr:129,name:"BAPI RAJAK",cat:"NORMAL"},{sr:131,name:"SOMNATH KARMAKAR (SOMU)",cat:"NORMAL"},{sr:136,name:"GURUPADA NANDI (BUBAI)",cat:"NORMAL"},{sr:140,name:"AKASH ROY",cat:"NORMAL"},{sr:142,name:"BISHAL SAW (BITTU)",cat:"NORMAL"},{sr:143,name:"ABDUL ANSARY",cat:"NORMAL"},{sr:144,name:"RAJEN SINGH",cat:"NORMAL"},{sr:146,name:"SOMNATH RAJAK",cat:"NORMAL"},{sr:152,name:"SOURAV MUKHERJEE",cat:"NORMAL"},{sr:154,name:"AJIT BAURI",cat:"NORMAL"},{sr:157,name:"SIDDHARTH SANKAR MAHANTI",cat:"NORMAL"},{sr:158,name:"RAHUL DUBEY",cat:"NORMAL"},{sr:159,name:"JAGANNATH DUTTA",cat:"NORMAL"},{sr:161,name:"MANOTOSH RAJWAR",cat:"NORMAL"},{sr:164,name:"GAUTAM KUSHWAHA",cat:"NORMAL"},{sr:165,name:"BABAN MAHATO",cat:"NORMAL"},{sr:166,name:"PURNA CH BAGDI",cat:"NORMAL"},{sr:167,name:"PALLAB BHATTACHARYYA",cat:"NORMAL"},{sr:170,name:"JITEN GARAI",cat:"NORMAL"},{sr:171,name:"VISHAL SAH",cat:"NORMAL"},{sr:173,name:"SUBRATA PARAMANIK",cat:"NORMAL"},{sr:174,name:"SAIF ALI ANSARI",cat:"NORMAL"},{sr:176,name:"RAMJAN MAHAMMAD",cat:"NORMAL"},{sr:179,name:"MALOY PARAMANIK",cat:"NORMAL"},{sr:180,name:"RIJU RAJAK",cat:"NORMAL"},{sr:182,name:"CHIRANJIT RAJAK",cat:"NORMAL"},{sr:184,name:"SK AKBAR",cat:"NORMAL"},{sr:185,name:"DIPAK CHATTERJEE",cat:"NORMAL"},{sr:186,name:"ARUP MUKHERJEE",cat:"NORMAL"},{sr:188,name:"DEBAPRIYA MUKHERJEE (DODON)",cat:"NORMAL"},{sr:190,name:"ATANU MAHATO",cat:"NORMAL"},{sr:191,name:"TAPESH CHANDRA PAUL",cat:"NORMAL"},{sr:192,name:"SACHIN GOPE",cat:"NORMAL"},{sr:193,name:"RIYAZ SIDDIKI",cat:"NORMAL"},{sr:196,name:"PRABAL HAZRA",cat:"NORMAL"},{sr:199,name:"PABAN SAMAL",cat:"NORMAL"},{sr:200,name:"SIDDHARTHA CHAKRABORTY",cat:"NORMAL"},{sr:201,name:"MOHIT PRASAD GOPE",cat:"NORMAL"},{sr:202,name:"RAJKISHOR MAHATO",cat:"NORMAL"},{sr:203,name:"SUMIT DAS (RIJU)",cat:"NORMAL"},{sr:204,name:"AKALANKA MAHATO",cat:"NORMAL"},{sr:206,name:"SULTAN AKHTAR (TIPU)",cat:"NORMAL"},{sr:208,name:"DEVENDRA CHAKRABORTY",cat:"NORMAL"},{sr:211,name:"BIKRAM GORAI",cat:"NORMAL"},{sr:212,name:"BIJOY ROY",cat:"NORMAL"},{sr:213,name:"JITEN BAURI (MONA)",cat:"NORMAL"},{sr:215,name:"BAPI MAHATO",cat:"NORMAL"},{sr:216,name:"BADAL TIWARI",cat:"NORMAL"},{sr:217,name:"RITESH SINGHA DEB",cat:"NORMAL"},{sr:218,name:"GANESH MODAK",cat:"NORMAL"},{sr:219,name:"KARTICK MAHATO",cat:"NORMAL"},{sr:220,name:"MANAS HARI",cat:"NORMAL"},{sr:221,name:"AVIJIT ROY",cat:"NORMAL"},{sr:223,name:"MD IRSAD ANSARI",cat:"NORMAL"},{sr:225,name:"SUBHASIS BANERJEE",cat:"NORMAL"},{sr:226,name:"BRAJA KISHORE MAHATO (BEJO)",cat:"NORMAL"},{sr:227,name:"RABEN SINGH SARDAR",cat:"NORMAL"},{sr:228,name:"TUSHAR KANTI MAHATO",cat:"NORMAL"},{sr:229,name:"WASIM KHAN",cat:"NORMAL"},{sr:230,name:"RAKESH ROY",cat:"NORMAL"},{sr:231,name:"SUBRATA MAHATO",cat:"NORMAL"},{sr:232,name:"BIDYUT MAJEE",cat:"NORMAL"},{sr:234,name:"SK AMJED ALI",cat:"NORMAL"},{sr:235,name:"BIPUL MAIKAP",cat:"NORMAL"},{sr:237,name:"SAMIUL ANSARY (CHOTU)",cat:"NORMAL"},{sr:239,name:"BIKASH SHARMA",cat:"NORMAL"},{sr:240,name:"AMIT SINGHA",cat:"NORMAL"},{sr:243,name:"RIVU DAS",cat:"NORMAL"},{sr:245,name:"DIBYENDU MAHATO",cat:"NORMAL"},{sr:246,name:"RAHUL RAJAK (BUMBA)",cat:"NORMAL"},{sr:247,name:"PRAKASH HALWAI",cat:"NORMAL"},{sr:248,name:"jayanta bauri",cat:"NORMAL"},{sr:249,name:"SACHIN RAJAK",cat:"NORMAL"},{sr:250,name:"PARIMAL MAjHI",cat:"NORMAL"},{sr:252,name:"KIRAN MUKHERJEE (HIRAN)",cat:"NORMAL"},{sr:254,name:"ARUP BOURI",cat:"NORMAL"},{sr:255,name:"MILAN BAURI",cat:"NORMAL"},{sr:256,name:"RAHUL BARAL",cat:"NORMAL"},{sr:257,name:"BISWAJIT GOPE",cat:"NORMAL"},{sr:258,name:"SK SATTAR",cat:"NORMAL"},{sr:260,name:"MAHENDRA BAURI",cat:"NORMAL"},{sr:262,name:"SHYAMAL BARAN SAHIS",cat:"NORMAL"},{sr:263,name:"DIPOK GORAI",cat:"NORMAL"},{sr:265,name:"MANAJ BAURI",cat:"NORMAL"},{sr:266,name:"DEBABRATA TUDU",cat:"NORMAL"},{sr:267,name:"SK GOLAM AZHAR",cat:"NORMAL"},{sr:268,name:"SHYAMAL MANDAL",cat:"NORMAL"},{sr:273,name:"MD ARMAN",cat:"NORMAL"},{sr:275,name:"BIBEK BAURI",cat:"NORMAL"},{sr:276,name:"MD ASLAM",cat:"NORMAL"},{sr:277,name:"AKASH RAKSHIT",cat:"NORMAL"},{sr:278,name:"JHULAN MODAK",cat:"NORMAL"},{sr:279,name:"ARNAB KUNDU",cat:"NORMAL"},{sr:281,name:"CHANDAN DEY",cat:"NORMAL"},{sr:282,name:"ABDUL HAMID (ABDUL)",cat:"NORMAL"},{sr:283,name:"SANDIP MAHATO",cat:"NORMAL"},{sr:285,name:"SHYAMAL TUDU",cat:"NORMAL"},{sr:286,name:"SUKANTA MAHATO",cat:"NORMAL"},{sr:287,name:"SUMAN MAJEE",cat:"NORMAL"},{sr:289,name:"PRASENJIT SEN (BISHAL)",cat:"NORMAL"},{sr:291,name:"PARTHA SANTIKARI",cat:"NORMAL"},{sr:292,name:"PREM KUMAR (SONU)",cat:"NORMAL"},{sr:293,name:"TABREJ ALAM",cat:"NORMAL"},{sr:295,name:"SWADESH KUMBHAKAR",cat:"NORMAL"},{sr:297,name:"SANTOSH KUMAR",cat:"NORMAL"},{sr:298,name:"BIDHAN MAHATO",cat:"NORMAL"},{sr:299,name:"DIPAK MUKHERJEE",cat:"NORMAL"},{sr:301,name:"SK SULTAN",cat:"NORMAL"},{sr:302,name:"SOUMEN GOPE",cat:"NORMAL"},{sr:303,name:"SADHAN SHUTRADHAR",cat:"NORMAL"},{sr:304,name:"PARTHA DEY",cat:"NORMAL"},{sr:305,name:"SAMIR ORANG",cat:"NORMAL"},{sr:306,name:"SK JUMMAN (AKHTAR)",cat:"NORMAL"},{sr:307,name:"AVINANDAN DUTTA",cat:"NORMAL"},{sr:308,name:"SUDIP RAJAK (CHOTO)",cat:"NORMAL"},{sr:310,name:"PABAN KALINDI",cat:"NORMAL"},{sr:311,name:"MAHABIR KUMAR",cat:"NORMAL"},{sr:312,name:"RAHUL MAHATO",cat:"NORMAL"},{sr:316,name:"MADAN MAHATO",cat:"NORMAL"},{sr:317,name:"PREM DHIBAR",cat:"NORMAL"},{sr:319,name:"RAVI SHARMA",cat:"NORMAL"},{sr:321,name:"SUBIR GHOSH",cat:"NORMAL"},{sr:323,name:"AVIJIT ROY",cat:"NORMAL"},{sr:324,name:"SOUVIK CHAKRABORTY",cat:"NORMAL"},{sr:325,name:"SK SADDAM HUSSAIN",cat:"NORMAL"}
+        ];
+
+        const teams = ["KRISHNAPUR", "ASTIK 11","AYUSHMAN XI","MAHAKAL XI LAULARA","BARABAZAR RED DRAGONS","SHIB SHAMBHU","BABAI XI ADRA","AGGRESSIVE PARBELIA","UTTAM XI PURULIA","MAHADEV WARRIORS","PUNCHA PIRATES","HURA PANTHERS","SHRIHAN XI","MANBHUM WARRIORS","MANBAZAR SUPER KINGS","AAROHI XI"];
+
+        let user, db, purses = {}, soldPlayers = [];
+        let pendingAction = null; // To store what to do after PIN: "sale" or "recall"
+        let lastSoldRef = null;
+
+        async function init() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                db = getFirestore(app);
+                await signInAnonymously(auth);
+                onAuthStateChanged(auth, (u) => {
+                    user = u;
+                    if (user) {
+                        document.getElementById("status").innerText = "ADMIN PORTAL LIVE";
+                        setupListeners();
+                    }
+                });
+            } catch (err) { console.error("Firebase Init Error:", err); }
+        }
+
+        function setupListeners() {
+            if (!user) return;
+            const pursesRef = doc(db, 'artifacts', appId, 'public', 'data', 'purseData', 'global');
+            onSnapshot(pursesRef, (snap) => {
+                purses = snap.data() || {};
+                teams.forEach(t => { if(purses[t] === undefined) purses[t] = INITIAL_PURSE; });
+                window.renderBoard();
+            });
+
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'soldPlayers'), (snap) => {
+                soldPlayers = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                window.renderBoard();
+                window.updateMarquee();
+                
+                // Update lastSoldRef globally from real data
+                if(soldPlayers.length > 0) {
+                    const sorted = [...soldPlayers].sort((a,b) => b.timestamp - a.timestamp);
+                    lastSoldRef = { id: sorted[0].id, team: sorted[0].bidder, price: sorted[0].price, sr: sorted[0].sr };
+                    document.getElementById("topRecallBtn").style.display = "flex";
+                } else {
+                    document.getElementById("topRecallBtn").style.display = "none";
+                }
+            });
+        }
+
+        window.filterPlayers = function() {
+            const input = document.getElementById("playerInput").value;
+            const list = document.getElementById("playerSuggestions");
+            list.innerHTML = "";
+            if(input.length < 1) return;
+
+            const soldSrs = soldPlayers.map(p => Number(p.sr));
+            const matches = players.filter(p => 
+                !soldSrs.includes(p.sr) && 
+                (p.sr.toString().padStart(3, '0').includes(input) || p.name.toLowerCase().includes(input.toLowerCase()))
+            ).slice(0, 5);
+
+            matches.forEach(p => {
+                const div = document.createElement("div");
+                const sr3 = p.sr.toString().padStart(3, '0');
+                div.className = "p-3 hover:bg-emerald-600 hover:text-white cursor-pointer border-b border-gray-100 text-sm font-bold text-slate-700 transition-all";
+                div.innerText = `[${sr3}] ${p.name} (${p.cat})`;
+                div.onclick = () => {
+                    document.getElementById("playerInput").value = sr3;
+                    document.getElementById("selectedPlayerInfo").innerText = `${p.name} - ${p.cat}`;
+                    list.innerHTML = "";
+                    document.getElementById("priceInput").focus();
+                };
+                list.appendChild(div);
+            });
+        }
+
+        window.openPinModal = function(type, data) {
+            pendingAction = { type, data };
+            document.getElementById("pinOverlay").style.display = "flex";
+            document.getElementById("pinInput").focus();
+        }
+
+        window.closePinModal = function() {
+            document.getElementById("pinOverlay").style.display = "none";
+            document.getElementById("pinInput").value = "";
+            pendingAction = null;
+        }
+
+        window.verifyAndExecute = async function() {
+            const pin = document.getElementById("pinInput").value;
+            if(pin !== "1111") return alert("INVALID PIN!");
+
+            const { type, data } = pendingAction;
+            if(type === 'sale') await executeSaleFinal(data);
+            else if(type === 'recall') await recallPlayerFinal(data);
+            
+            window.closePinModal();
+        }
+
+        window.startSaleProcess = function(e) {
+            if(e) e.preventDefault();
+            const srStr = document.getElementById("playerInput").value;
+            const price = parseInt(document.getElementById("priceInput").value);
+            const team = document.getElementById("teamSelect").value;
+            if(!srStr || isNaN(price) || !team) return alert("Fill all details!");
+            window.openPinModal('sale', { srStr, price, team });
+        }
+
+        async function executeSaleFinal(data) {
+            const { srStr, price, team } = data;
+            const player = players.find(p => p.sr.toString().padStart(3, '0') === srStr);
+            if(!player) return alert("Invalid Player!");
+
+            const currentPurse = Number(purses[team]) || INITIAL_PURSE;
+            if(currentPurse < price) return alert("Insufficient Purse!");
+
+            try {
+                const newPurse = currentPurse - price;
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'purseData', 'global'), { ...purses, [team]: newPurse });
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'soldPlayers'), {
+                    sr: Number(player.sr),
+                    name: player.name,
+                    cat: player.cat,
+                    price: Number(price),
+                    bidder: team,
+                    timestamp: Date.now()
+                });
+                document.getElementById("saleForm").reset();
+                document.getElementById("selectedPlayerInfo").innerText = "None";
+            } catch (err) { console.error(err); }
+        }
+
+        window.startRecallProcess = function(docId, team, price, srNum) {
+            window.openPinModal('recall', { docId, team, price, srNum });
+        }
+
+        async function recallPlayerFinal(data) {
+            const { docId, team, price, srNum } = data;
+            const currentPurse = Number(purses[team]) || INITIAL_PURSE;
+            const restoredPurse = currentPurse + Number(price);
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'purseData', 'global'), { ...purses, [team]: restoredPurse });
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'soldPlayers', docId));
+                
+                // For top recall, fill the form back
+                document.getElementById("playerInput").value = srNum.toString().padStart(3, '0');
+                document.getElementById("priceInput").value = price;
+                document.getElementById("teamSelect").value = team;
+                window.filterPlayers();
+            } catch (err) { console.error(err); }
+        }
+
+        window.recallLastTransaction = function() {
+            if(!lastSoldRef) return alert("No recent sale found.");
+            window.startRecallProcess(lastSoldRef.id, lastSoldRef.team, lastSoldRef.price, lastSoldRef.sr);
+        }
+
+        window.updateMarquee = function() {
+            const marqueeEl = document.getElementById("soldMarqueeContent");
+            if (!marqueeEl) return;
+            const lastFive = [...soldPlayers].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
+            if (lastFive.length === 0) {
+                marqueeEl.innerHTML = "Awaiting auction action...";
+                return;
+            }
+            const items = lastFive.map(p => `
+                <span class="mx-10 marquee-item">
+                    <span class="text-slate-400 font-medium">SOLD:</span>
+                    <span class="text-amber-600 font-black px-2">${p.name}</span> 
+                    <span class="text-slate-400 font-medium">to</span> 
+                    <span class="text-sky-600 font-black px-2">${p.bidder}</span> 
+                    <span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full font-black ml-2 shadow-sm border border-emerald-200">₹${p.price}</span>
+                </span>
+            `).join(' <span class="text-slate-300 font-light mx-4">⚡</span> ');
+            marqueeEl.innerHTML = items + ' <span class="text-slate-300 font-light mx-4">⚡</span> ' + items;
+        }
+
+        window.renderBoard = function() {
+            const container = document.getElementById("adminBoard");
+            const teamSearchTerm = document.getElementById("teamSearchInput")?.value.toLowerCase() || "";
+            const filteredTeams = teams.filter(t => t.toLowerCase().includes(teamSearchTerm));
+            
+            if (filteredTeams.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center p-10 text-gray-400 font-bold uppercase tracking-widest">No matching teams</div>`;
+                return;
+            }
+
+            container.innerHTML = filteredTeams.map(t => {
+                const squad = soldPlayers.filter(p => p.bidder === t);
+                const purseVal = purses[t] !== undefined ? purses[t] : INITIAL_PURSE;
+                const playersLeft = MAX_PLAYERS - squad.length;
+
+                return `
+                <div class="card p-5 border border-slate-200 rounded-3xl bg-white flex flex-col transition-all hover:shadow-2xl">
+                    <div class="border-b border-slate-100 pb-3 mb-3">
+                        <div class="font-black text-slate-800 text-sm tracking-tight truncate mb-1 uppercase">${t}</div>
+                        <div class="flex justify-between items-center mt-2">
+                            <div class="flex flex-col">
+                                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Budget Left</span>
+                                <span class="text-emerald-600 font-mono font-black text-xl">₹${purseVal}</span>
+                            </div>
+                            <div class="flex flex-col items-end">
+                                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter font-black">Players Left</span>
+                                <span class="text-rose-600 font-black text-xl">${playersLeft}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto max-h-72 space-y-2 pr-1 custom-scroll">
+                        ${squad.map(p => `
+                        <div class="flex justify-between items-center text-[10px] bg-slate-50 p-2.5 rounded-xl border border-slate-100 transition-all hover:border-slate-300">
+                            <span class="truncate pr-1 text-slate-700 font-bold">${p.name}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-900 font-black whitespace-nowrap">₹${p.price}</span>
+                                <button onclick="window.startRecallProcess('${p.id}', '${t}', ${p.price}, ${p.sr})" 
+                                        class="bg-rose-500 text-white px-2 py-1 rounded-lg hover:bg-rose-600 text-[8px] font-black shadow-sm uppercase transition-all">RECALL</button>
+                            </div>
+                        </div>`).join('')}
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        window.resetEverything = async function() {
+            if(!confirm("WIPE ALL DATA?")) return;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'purseData', 'global'), {});
+                const q = collection(db, 'artifacts', appId, 'public', 'data', 'soldPlayers');
+                const snap = await getDocs(q);
+                for (const d of snap.docs) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'soldPlayers', d.id)); }
+                location.reload();
+            } catch (err) { console.error(err); }
+        };
+
+        window.onload = init;
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --gold: #c5a020; }
+        body { background: #f8fafc; color: #334155; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+        input, select { background: #ffffff !important; color: #1e293b !important; border: 2px solid #e2e8f0 !important; }
+        input:focus, select:focus { border-color: #10b981 !important; outline: none; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
+        .card { background: white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .marquee-container {
+            overflow: hidden;
+            white-space: nowrap;
+            background: linear-gradient(90deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
+            padding: 22px 0;
+            border-radius: 24px;
+            border: 2px solid #334155;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .marquee-content { display: inline-block; animation: scroll 45s linear infinite; }
+        .marquee-item { font-size: 1.25rem; display: inline-flex; align-items: center; }
+        @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .marquee-container:hover .marquee-content { animation-play-state: paused; }
+
+        #pinOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.9); display: none;
+            justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(8px);
+        }
+        .pin-card {
+            background: white; padding: 3rem; border-radius: 3rem; text-align: center;
+            width: 90%; max-width: 450px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-12">
+
+    <!-- PIN SECURITY OVERLAY -->
+    <div id="pinOverlay">
+        <div class="pin-card border-8 border-slate-50">
+            <h3 class="text-3xl font-black text-slate-900 mb-2 tracking-tighter uppercase">Security Authorization</h3>
+            <p class="text-sm text-slate-500 mb-8 font-bold">Action requires Master PIN</p>
+            <input type="password" id="pinInput" maxlength="4" placeholder="••••" 
+                   class="w-full text-center text-5xl p-6 rounded-3xl bg-slate-50 border-2 border-slate-200 mb-8 font-black tracking-[1.5rem] focus:border-emerald-500 outline-none transition-all">
+            <div class="flex gap-4">
+                <button onclick="window.closePinModal()" class="flex-1 p-5 rounded-2xl bg-slate-100 text-slate-600 font-black uppercase tracking-widest hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="window.verifyAndExecute()" class="flex-1 p-5 rounded-2xl bg-emerald-600 text-white font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-lg">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto">
+        <!-- TOP RECALL BUTTON (MOBILE FRIENDLY) -->
+        <div id="topRecallBtn" style="display:none;" class="mb-6 justify-center">
+            <button onclick="window.recallLastTransaction()" 
+                    class="bg-rose-100 text-rose-700 border-2 border-rose-200 px-6 py-3 rounded-full font-black text-xs uppercase tracking-widest hover:bg-rose-200 transition shadow-sm flex items-center gap-2">
+                <span class="text-lg">↺</span> RECALL LAST TRANSACTION
+            </button>
+        </div>
+
+        <header class="flex flex-col md:flex-row justify-between items-end mb-12 gap-6 border-b border-slate-200 pb-8">
+            <div>
+                <h1 class="text-5xl font-black text-slate-900 tracking-tighter uppercase leading-none italic">PBB 2.0 Admin</h1>
+                <p class="text-xs text-slate-500 font-bold tracking-[0.3em] mt-2 uppercase">Management Command Terminal</p>
+            </div>
+            <div id="status" class="px-6 py-2 rounded-full bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest shadow-xl">Online</div>
+        </header>
+
+        <!-- SALE ENTRY SECTION -->
+        <div class="bg-white p-10 rounded-[3rem] border border-slate-100 mb-8 shadow-2xl relative">
+            <div class="absolute -top-4 left-10 bg-emerald-600 text-white text-[11px] font-black px-6 py-1.5 rounded-full uppercase tracking-widest shadow-lg">Transaction Entry</div>
+            
+            <form id="saleForm" onsubmit="window.startSaleProcess(event)" class="grid grid-cols-1 md:grid-cols-4 gap-10 items-end">
+                
+                <div class="relative">
+                    <label class="block text-[11px] text-slate-400 mb-3 uppercase font-black tracking-widest">1. Player Sr No</label>
+                    <input type="text" id="playerInput" autocomplete="off" onkeyup="window.filterPlayers()" placeholder="Type Sr No" 
+                           class="w-full p-4 rounded-2xl bg-slate-50 border-none outline-none text-xl font-black transition-all">
+                    <div id="playerSuggestions" class="absolute z-50 left-0 right-0 bg-white border border-slate-100 rounded-b-3xl max-h-96 overflow-y-auto shadow-2xl mt-2 divide-y divide-slate-50"></div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] text-slate-400 mb-3 uppercase font-black tracking-widest">2. Sale Price (₹)</label>
+                    <input type="number" id="priceInput" placeholder="Amount" 
+                           class="w-full p-4 rounded-2xl bg-slate-50 border-none outline-none text-xl font-black transition-all">
+                </div>
+
+                <div class="w-full">
+                    <label class="block text-[11px] text-slate-400 mb-3 uppercase font-black tracking-widest">3. Team</label>
+                    <select id="teamSelect" class="w-full p-4 rounded-2xl bg-slate-50 border-none outline-none text-xl font-black transition-all appearance-none cursor-pointer">
+                        <option value="">-- Choose Team --</option>
+                        <option value="KRISHNAPUR">KRISHNAPUR</option>
+                        <option value="ASTIK 11">ASTIK 11</option>
+                        <option value="AYUSHMAN XI">AYUSHMAN XI</option>
+                        <option value="MAHAKAL XI LAULARA">MAHAKAL XI LAULARA</option>
+                        <option value="BARABAZAR RED DRAGONS">BARABAZAR RED DRAGONS</option>
+                        <option value="SHIB SHAMBHU">SHIB SHAMBHU</option>
+                        <option value="BABAI XI ADRA">BABAI XI ADRA</option>
+                        <option value="AGGRESSIVE PARBELIA">AGGRESSIVE PARBELIA</option>
+                        <option value="UTTAM XI PURULIA">UTTAM XI PURULIA</option>
+                        <option value="MAHADEV WARRIORS">MAHADEV WARRIORS</option>
+                        <option value="PUNCHA PIRATES">PUNCHA PIRATES</option>
+                        <option value="HURA PANTHERS">HURA PANTHERS</option>
+                        <option value="SHRIHAN XI">SHRIHAN XI</option>
+                        <option value="MANBHUM WARRIORS">MANBHUM WARRIORS</option>
+                        <option value="MANBAZAR SUPER KINGS">MANBAZAR SUPER KINGS</option>
+                        <option value="AAROHI XI">AAROHI XI</option>
+                    </select>
+                </div>
+
+                <div class="w-full">
+                    <button type="submit" class="w-full bg-slate-900 text-white font-black p-4 rounded-2xl hover:bg-black transition shadow-xl tracking-widest uppercase text-xl border-b-8 border-slate-700 active:border-0 active:translate-y-1">
+                        SOLD
+                    </button>
+                </div>
+            </form>
+            <div class="mt-6 text-[12px] text-slate-400 border-t border-slate-50 pt-5 flex flex-col md:flex-row justify-between items-center font-bold">
+                <p>SELECTED: <span id="selectedPlayerInfo" class="text-blue-600 font-black italic underline ml-2">None</span></p>
+                <p class="text-emerald-500 italic tracking-tighter uppercase font-black opacity-80 underline">Suraksha: PIN Protected Mode</p>
+            </div>
+        </div>
+
+        <!-- MARQUEE TICKER -->
+        <div class="mb-16">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 ml-4 italic">Live Auction History Ticker</p>
+            <div class="marquee-container shadow-2xl">
+                <div id="soldMarqueeContent" class="marquee-content font-bold">
+                    Awaiting auction data...
+                </div>
+            </div>
+        </div>
+
+        <!-- TRACKER HEADER -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-12 gap-8">
+            <h2 class="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">Squad Tracker</h2>
+            <div class="w-full md:w-1/3 relative group">
+                <input type="text" id="teamSearchInput" onkeyup="window.renderBoard()" placeholder="Quick Team Lookup..." 
+                       class="w-full p-5 pl-16 rounded-full bg-white text-sm border-slate-200 border-2 focus:ring-4 focus:ring-emerald-100 outline-none transition-all shadow-xl font-bold">
+                <span class="absolute left-7 top-1/2 -translate-y-1/2 opacity-30 group-focus-within:opacity-100 transition-opacity text-2xl text-emerald-600">🔍</span>
+            </div>
+        </div>
+
+        <!-- TEAM GRID -->
+        <div id="adminBoard" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-28 text-slate-900">
+            <!-- Team Cards Dynamically Injected -->
+        </div>
+
+        <!-- FOOTER -->
+        <div class="flex flex-col md:flex-row justify-between items-center mt-20 pt-12 border-t border-slate-200 gap-4 opacity-50 hover:opacity-100 transition-opacity">
+            <p class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Version 7.0.0 | High-Contrast PIN Protected</p>
+            <button onclick="resetEverything()" class="text-[11px] text-rose-500 font-black underline decoration-rose-200 underline-offset-8 hover:text-rose-600 transition-all uppercase tracking-widest">Master Format Protocol</button>
+        </div>
+    </div>
+
+</body>
+</html>
